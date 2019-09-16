@@ -6,49 +6,98 @@ __maintainer__ = "Md. Ahsan Ayub"
 __email__ = "mayub42@students.tntech.edu"
 __status__ = "Prototype"
 
-import os
-import glob
+
+# Importing the libraries
 import json
-# import pandas as pd
+import numpy as np
+import pandas as pd
+import logging 
 
-dir_name = "../dataset/raw/t1"
-os.chdir(dir_name)
-
-extension = 'json'
-all_filenames = [i for i in glob.glob('*.{}'.format(extension))]
 
 # Parsing data from the production JSON dataset
-json_file = open(all_filenames[4])
+json_file = open('../dataset/raw/t9/suricata_alert.json')
 data = json.load(json_file)
 json_file.close()
 
+
+# Declaring the global variables
 cols_name_alert = [
-                    'indextime', 'host', 'time', 'action',
-                    'category', 'gid', 'rev', 'severity',
-                    'signature', 'signature_id', 'dest_ip',
-                    'dest_port', 'alert', 'flow_id', 'in_iface',
-                    'payload', 'packet', 'proto', 'src_ip',
-                    'src_ip', 'src_port', 'hostname',
+                    '_indextime', 'host', '_time', 'flow_id',
+                    'action', 'category', 'gid', 'rev', 'severity',
+                    'signature', 'signature_id', 'dest_ip', 'dest_port',
+                    'tx_id', 'in_iface', 'payload', 'packet',
+                    'proto', 'src_ip', 'src_port', 'hostname',
                     'http_consent_type', 'http_user_agent',
-                    'http_user_agent', 'length', 'protocol',
-                    'status', 'url'
+                    'length', 'protocol', 'status', 'url', 'team'
                    ]
 
-count = 0
-count_http = 0
+alertDataFrame = np.ndarray([len(data),len(cols_name_alert)])
+alertDataFrame = alertDataFrame.astype(str)
+alertTemp = ['nan' for i in range(len(cols_name_alert))]
+rowIndexToInsertNDArray = 0
 
+
+# Get the column index
+def chcekColumnName(key):
+    
+    len_cols_name_alert = len(cols_name_alert)
+    for i in range(0, len_cols_name_alert):
+        if(key == cols_name_alert[i]):
+            return i #returning the existing column value
+    
+    return -1 # No column name exists    
+
+
+# Copy temp list to the main dataframe
+def loadToMainDataFrame():
+    for i in range(0, len(cols_name_alert)):
+        if(alertTemp[i] == 'nan'):
+            alertDataFrame[rowIndexToInsertNDArray][i] = np.nan
+        else:
+            alertDataFrame[rowIndexToInsertNDArray][i] = alertTemp[i]
+
+# Main processor engine for suricata alert JSON file
 for d in data:
-    data_raw = json.loads(d["_raw"])
-    try:
-        if(len(data_raw['alert']) != 7):
-            print(data_raw['alert'])        
+    for attribute in d:
+        if(attribute == "_raw"):
+            data_raw = json.loads(d[attribute])
             
-        if(len(data_raw['app_proto']) == 8):
-            print(data_raw['app_proto'])
+            for item in data_raw:
+                
+                try:
+                    if(item == 'alert'):
+                        for key in data_raw['alert']:
+                            i = chcekColumnName(key)
+                            if(i != -1):
+                                alertTemp[i] = data_raw['alert'][key]
+                                
+                except:
+                    logging.exception('no alert found\n', exc_info=True)
+                
+                try:
+                    if(item == 'http'):
+                        for key in data_raw['http']:
+                            i = chcekColumnName(key)
+                            if(i != -1):
+                                alertTemp[i] = data_raw['http'][key]
+                            
+                except:
+                    logging.exception('no http found\n', exc_info=True)
+                
+                i = chcekColumnName(item)
+                if(i != -1):
+                    alertTemp[i] = data_raw[item]
         
-        if(data_raw['app_proto'] == 'http'):
-            count_http = count_http + 1
-    except:
-        if(count < 1):
-            print(d)
-        count = count + 1
+        index = chcekColumnName(attribute)
+        if(index != -1):
+            alertTemp[index] = d[attribute]
+        
+    alertTemp[-1] = 9 # Team number is 1        
+    loadToMainDataFrame()
+    rowIndexToInsertNDArray = rowIndexToInsertNDArray + 1
+    alertTemp.clear()
+    alertTemp = ['nan' for i in range(len(cols_name_alert))]
+    
+    
+# Generating the CSV file for further usuage.            
+pd.DataFrame(alertDataFrame).to_csv("../suricata_alert_log_t9.csv")
