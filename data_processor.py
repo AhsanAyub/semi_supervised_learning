@@ -15,7 +15,20 @@ import logging
 
 
 # Parsing data from the production JSON dataset
-json_file = open('../dataset/raw/t1/suricata_http.json')
+json_file = open('../dataset/raw/t7/suricata_http.json')
+
+'''with open('../dataset/raw/t8/suricata_http.json') as json_file:      
+    jsonData = json_file.readlines()
+    # this line below may take at least 8-10 minutes of processing for 4-5 million rows. It converts all strings in list to actual json objects. 
+    jsonData = list(map(json.loads, jsonData))
+    
+jsonData = pd.DataFrame(jsonData)
+
+data = []
+
+for i in range(0,492304):
+    jsonData.append(data[i][0].copy())'''
+    
 data = json.load(json_file)
 json_file.close()
 
@@ -45,7 +58,7 @@ alertDataFrame = alertDataFrame.astype(str)
 alertTemp = ['nan' for i in range(len(cols_name_alert))]
 
 httpDataFrame = np.ndarray([len(data),len(cols_name_http)])
-httpDataFrame = alertDataFrame.astype(str)
+httpDataFrame = httpDataFrame.astype(str)
 httpTemp = ['nan' for i in range(len(cols_name_http))]
 
 rowIndexToInsertNDArray = 0
@@ -54,9 +67,11 @@ rowIndexToInsertNDArray = 0
 # Get the column index
 def chcekColumnName(key):
     
-    len_cols_name_alert = len(cols_name_alert)
-    for i in range(0, len_cols_name_alert):
-        if(key == cols_name_alert[i]):
+    # len_cols_name = len(cols_name_alert)
+    len_cols_name = len(cols_name_http)
+    for i in range(0, len_cols_name):
+        #if(key == cols_name_alert[i]):
+        if(key == cols_name_http[i]):
             return i #returning the existing column value
     
     return -1 # No column name exists    
@@ -64,11 +79,19 @@ def chcekColumnName(key):
 
 # Copy temp list to the main dataframe
 def loadToMainDataFrame():
-    for i in range(0, len(cols_name_alert)):
+    for i in range(0, len(cols_name_http)):    
+        if(httpTemp[i] == 'nan'):
+            httpDataFrame[rowIndexToInsertNDArray][i] = np.nan
+        else:
+            httpDataFrame[rowIndexToInsertNDArray][i] = httpTemp[i]
+            
+    '''for i in range(0, len(cols_name_alert)):
         if(alertTemp[i] == 'nan'):
             alertDataFrame[rowIndexToInsertNDArray][i] = np.nan
         else:
-            alertDataFrame[rowIndexToInsertNDArray][i] = alertTemp[i]
+            alertDataFrame[rowIndexToInsertNDArray][i] = alertTemp[i]'''
+            
+    
 
 
 # Main processor engine for suricata alert JSON file
@@ -119,7 +142,46 @@ def processIDSAlert():
         alertTemp = ['nan' for i in range(len(cols_name_alert))]
 
 
-        
+# Main processor engine for suricata http JSON file
+def processIDSHTTPLog():
+    # Referencing global variables
+    global rowIndexToInsertNDArray
+    global httpTemp
+    
+    for d in data:
+        for attribute in d:
+            if(attribute == "_raw"):
+                data_raw = json.loads(d[attribute])
+                
+                for item in data_raw:
+                    try:
+                        if(item == 'http'):
+                            for key in data_raw['http']:
+                                i = chcekColumnName(key)
+                                if(i != -1):
+                                    httpTemp[i] = data_raw['http'][key]
+                                
+                    except:
+                        logging.exception('no http found\n', exc_info=True)
+                    
+                    i = chcekColumnName(item)
+                    if(i != -1):
+                        httpTemp[i] = data_raw[item]
+            
+            index = chcekColumnName(attribute)
+            if(index != -1):
+                httpTemp[index] = d[attribute]
+            
+        httpTemp[-1] = 7 # Team number is 1        
+        loadToMainDataFrame()
+        rowIndexToInsertNDArray = rowIndexToInsertNDArray + 1
+        httpTemp.clear()
+        httpTemp = ['nan' for i in range(len(cols_name_http))]
+
+       
 processIDSAlert()    
+processIDSHTTPLog()
+
 # Generating the CSV file for further usuage.            
 pd.DataFrame(alertDataFrame).to_csv("../suricata_alert_log_t9.csv")
+pd.DataFrame(httpDataFrame).to_csv("../suricata_http_log_t7.csv")
