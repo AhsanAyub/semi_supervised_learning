@@ -1,0 +1,488 @@
+__author__ = "Md. Ahsan Ayub"
+__license__ = "GPL"
+__credits__ = ["Ayub, Md. Ahsan", "Johnson, Will",
+               "Siraj, Ambareen"]
+__maintainer__ = "Md. Ahsan Ayub"
+__email__ = "mayub42@students.tntech.edu"
+__status__ = "Prototype"
+
+
+# Modular function to apply decision tree classifier
+def DT_classifier(X, Y, numFold):
+    
+    # Intilization of the figure
+    myFig = plt.figure(figsize=[12,10])
+    
+    # Stratified K-Folds cross-validator
+    cv = StratifiedKFold(n_splits=numFold,random_state=None, shuffle=False)
+    
+    # Initialization of the decision tree classifier
+    classifier = tree.DecisionTreeClassifier()
+    
+    acc_scores = []
+    precision_scores = []
+    recall_scores = []
+    f1_scores = []
+    
+    tprs = []
+    aucs = []
+    mean_fpr = np.linspace(0, 1, 100)
+    
+    i = 1
+    for train, test in cv.split(X, Y):
+        
+        # Spliting the dataset
+        X_train, X_test, Y_train, Y_test = X[train], X[test], Y[train], Y[test]
+        
+        # Fitting the classifier into training set
+        classifier = classifier.fit(X_train, Y_train)
+        
+        # Breakdown of statistical measure based on classes
+        Y_pred = classifier.predict(X_test)
+        print(classification_report(Y_test, Y_pred, digits=4))
+        
+        # Compute the model's performance
+        acc_scores.append(accuracy_score(Y_test, Y_pred))
+        if(len(np.unique(Y)) > 2):
+            f1_scores_temp = []
+            f1_scores_temp.append(f1_score(Y_test, Y_pred, average=None))
+            f1_scores.append(np.mean(f1_scores_temp))
+            del f1_scores_temp
+            
+            precision_scores_temp = []
+            precision_scores_temp.append(precision_score(Y_test, Y_pred, average=None))
+            precision_scores.append(np.mean(precision_scores_temp))
+            del precision_scores_temp
+            
+            recall_scores_temp = []
+            recall_scores_temp.append(recall_score(Y_test, Y_pred, average=None))
+            recall_scores.append(np.mean(recall_scores_temp))
+            del recall_scores_temp
+        else:
+            f1_scores.append(f1_score(Y_test, Y_pred, average='binary'))
+            precision_scores.append(precision_score(Y_test, Y_pred, average='binary'))
+            recall_scores.append(recall_score(Y_test, Y_pred, average='binary'))
+        
+        if(len(np.unique(Y)) == 2):
+            probas_ = classifier.predict_proba(X_test)
+            fpr, tpr, thresholds = roc_curve(Y_test, probas_[:, 1])
+            tprs.append(interp(mean_fpr, fpr, tpr))
+            tprs[-1][0] = 0.0
+            roc_auc = auc(fpr, tpr)
+        
+            aucs.append(roc_auc)
+            plt.plot(fpr, tpr, lw=1, color='black', alpha=0.5,
+                     label='ROC fold %d (AUC = %0.3f)' % (i, roc_auc))
+            print("Iteration ongoing inside DT method - KFold step: ", i)
+            i += 1
+        
+    if(len(np.unique(Y)) == 2):
+        plt.plot([0,1],[0,1],linestyle = '--',lw = 1, alpha=0.5, color = 'black')
+        
+        mean_tpr = np.mean(tprs, axis=0)
+        mean_tpr[-1] = 1.0
+        mean_auc = auc(mean_fpr, mean_tpr)
+        plt.plot(mean_fpr, mean_tpr, color='black',
+                 label=r'Mean ROC (AUC = %0.3f)' % (mean_auc),
+                 lw=2, alpha=0.8)
+        
+        plt.xlim([-0.05, 1.05])
+        plt.ylim([-0.05, 1.05])
+        plt.xlabel('False Positive Rate', fontsize=18, weight='bold')
+        plt.ylabel('True Positive Rate', fontsize=18, weight='bold')
+        plt.title('Receiver Operating Characteristic (ROC) Curve\nDecision Tree', fontsize=20, fontweight='bold')
+        plt.legend(loc="lower right",fontsize=14)
+        plt.xticks(fontsize=16)
+        plt.yticks(fontsize=16)
+        plt.show()
+        
+        fileName = 'Decision_Tree_ROC_' + str(numFold) + '_Fold.eps'
+        # Saving the figure
+        myFig.savefig(fileName, format='eps', dpi=1200)
+    
+    # Statistical measurement of the model
+    print("Accuracy: ", np.mean(acc_scores))
+    print("Precision: ", np.mean(precision_scores))
+    print("Recall: ", np.mean(recall_scores))
+    print("F1: ", np.mean(f1_scores))
+    if(len(np.unique(Y)) == 2):
+        print(acc_scores)
+        print(precision_scores)
+        print(recall_scores)
+        print(f1_scores)
+        
+# Modular function to apply SVM
+def SVM_classifier(X, Y, numFold):
+    
+    # Intilization of the figure
+    myFig = plt.figure(figsize=[12,10])
+    
+    # Stratified K-Folds cross-validator
+    cv = StratifiedKFold(n_splits=numFold,random_state=None, shuffle=False)
+    
+    # Initialization of the SVM classifier
+    classifier = SVC(kernel = 'rbf', random_state = 0)
+    
+    acc_scores = []
+    precision_scores = []
+    recall_scores = []
+    f1_scores = []
+    
+    tprs = []
+    aucs = []
+    mean_fpr = np.linspace(0, 1, 100)
+    
+    i = 1
+    for train, test in cv.split(X, Y):
+        
+        # Spliting the dataset
+        X_train, X_test, Y_train, Y_test = X[train], X[test], Y[train], Y[test]
+        
+        # Fitting the classifier into training set
+        classifier = classifier.fit(X_train, Y_train)
+        
+        # Breakdown of statistical measure based on classes
+        Y_pred = classifier.predict(X_test)
+        print(classification_report(Y_test, Y_pred, digits=4))
+        
+        # Compute the model's performance
+        acc_scores.append(accuracy_score(Y_test, Y_pred))
+        
+        if(len(np.unique(Y)) > 2):
+            f1_scores_temp = []
+            f1_scores_temp.append(f1_score(Y_test, Y_pred, average=None))
+            f1_scores.append(np.mean(f1_scores_temp))
+            del f1_scores_temp
+            
+            precision_scores_temp = []
+            precision_scores_temp.append(precision_score(Y_test, Y_pred, average=None))
+            precision_scores.append(np.mean(precision_scores_temp))
+            del precision_scores_temp
+            
+            recall_scores_temp = []
+            recall_scores_temp.append(recall_score(Y_test, Y_pred, average=None))
+            recall_scores.append(np.mean(recall_scores_temp))
+            del recall_scores_temp
+        
+        else:
+            f1_scores.append(f1_score(Y_test, Y_pred, average='binary'))
+            precision_scores.append(precision_score(Y_test, Y_pred, average='binary'))
+            recall_scores.append(recall_score(Y_test, Y_pred, average='binary'))
+        
+        
+        if(len(np.unique(Y)) == 2):
+            from sklearn.preprocessing import label_binarize
+            Y_train = label_binarize(Y_train, classes = [i for i in range(len(np.unique(Y_train)))])
+            Y_test = label_binarize(Y_test, classes = [i for i in range(len(np.unique(Y_test)))])
+        
+            probas_ = classifier.predict_proba(X_test)
+            fpr, tpr, thresholds = roc_curve(Y_test, probas_[:, 1])
+            tprs.append(interp(mean_fpr, fpr, tpr))
+            tprs[-1][0] = 0.0
+            roc_auc = auc(fpr, tpr)
+            aucs.append(roc_auc)
+            plt.plot(fpr, tpr, lw=1, color='black', alpha=0.5,
+                     label='ROC fold %d (AUC = %0.3f)' % (i, roc_auc))
+            print("Iteration ongoing inside LR method - KFold step: ", i)
+            i += 1
+    
+    if(len(np.unique(Y)) == 2):    
+        plt.plot([0,1],[0,1],linestyle = '--',lw = 1, alpha=0.5, color = 'black')
+        
+        mean_tpr = np.mean(tprs, axis=0)
+        mean_tpr[-1] = 1.0
+        mean_auc = auc(mean_fpr, mean_tpr)
+        plt.plot(mean_fpr, mean_tpr, color='black',
+                 label=r'Mean ROC (AUC = %0.3f)' % (mean_auc),
+                 lw=2, alpha=0.8)
+        
+        plt.xlim([-0.05, 1.05])
+        plt.ylim([-0.05, 1.05])
+        plt.xlabel('False Positive Rate', fontsize=18, weight='bold')
+        plt.ylabel('True Positive Rate', fontsize=18, weight='bold')
+        plt.title('Receiver Operating Characteristic (ROC) Curve\nSupport Vector Machine', fontsize=20, fontweight='bold')
+        plt.legend(loc="lower right",fontsize=14)
+        plt.xticks(fontsize=16)
+        plt.yticks(fontsize=16)
+        plt.show()
+        
+        fileName = 'Support_Vector_Machnine_ROC_' + str(numFold) + '_Fold.eps'
+        # Saving the figure
+        myFig.savefig(fileName, format='eps', dpi=1200)
+    
+    
+    # Statistical measurement of the model
+    print("Accuracy: ", np.mean(acc_scores))
+    print("Precision: ", np.mean(precision_scores))
+    print("Recall: ", np.mean(recall_scores))
+    print("F1: ", np.mean(f1_scores))
+    if(len(np.unique(Y)) == 2):
+        print(acc_scores)
+        print(precision_scores)
+        print(recall_scores)
+        print(f1_scores)
+
+# Modular function to apply decision tree classifier
+def RF_classifier(X, Y, numFold):
+    
+    # Intilization of the figure
+    myFig = plt.figure(figsize=[12,10])
+    
+    # Stratified K-Folds cross-validator
+    cv = StratifiedKFold(n_splits=numFold,random_state=None, shuffle=False)
+    
+    # Initialization of the random forest classifier
+    classifier = RandomForestRegressor(n_estimators = 100, random_state = 0)
+    
+    acc_scores = []
+    precision_scores = []
+    recall_scores = []
+    f1_scores = []
+    
+    tprs = []
+    aucs = []
+    mean_fpr = np.linspace(0, 1, 100)
+    
+    i = 1
+    for train, test in cv.split(X, Y):
+        # Spliting the dataset
+        X_train, X_test, Y_train, Y_test = X[train], X[test], Y[train], Y[test]
+        
+        # Fitting the classifier into training set
+        classifier = classifier.fit(X_train, Y_train)
+        
+        # Breakdown of statistical measure based on classes
+        Y_pred = classifier.predict(X_test)
+        Y_pred = (Y_pred > 0.5)
+        print(classification_report(Y_test, Y_pred, digits=4))
+        
+        # Compute the model's performance
+        acc_scores.append(accuracy_score(Y_test, Y_pred))
+        
+        if(len(np.unique(Y)) > 2):
+            f1_scores_temp = []
+            f1_scores_temp.append(f1_score(Y_test, Y_pred, average=None))
+            f1_scores.append(np.mean(f1_scores_temp))
+            del f1_scores_temp
+            
+            precision_scores_temp = []
+            precision_scores_temp.append(precision_score(Y_test, Y_pred, average=None))
+            precision_scores.append(np.mean(precision_scores_temp))
+            del precision_scores_temp
+            
+            recall_scores_temp = []
+            recall_scores_temp.append(recall_score(Y_test, Y_pred, average=None))
+            recall_scores.append(np.mean(recall_scores_temp))
+            del recall_scores_temp
+        
+        else:
+            f1_scores.append(f1_score(Y_test, Y_pred, average='binary'))
+            precision_scores.append(precision_score(Y_test, Y_pred, average='binary'))
+            recall_scores.append(recall_score(Y_test, Y_pred, average='binary'))
+        
+        if(len(np.unique(Y)) == 2):
+            probas_ = classifier.predict_proba(X_test)
+            fpr, tpr, thresholds = roc_curve(Y_test, probas_[:, 1])
+            tprs.append(interp(mean_fpr, fpr, tpr))
+            tprs[-1][0] = 0.0
+            roc_auc = auc(fpr, tpr)
+        
+            aucs.append(roc_auc)
+            plt.plot(fpr, tpr, lw=1, color='black', alpha=0.5,
+                     label='ROC fold %d (AUC = %0.3f)' % (i, roc_auc))
+            print("Iteration ongoing inside RF method - KFold step: ", i)
+            i += 1
+        
+    if(len(np.unique(Y)) == 2):
+        plt.plot([0,1],[0,1],linestyle = '--',lw = 1, alpha=0.5, color = 'black')
+        
+        mean_tpr = np.mean(tprs, axis=0)
+        mean_tpr[-1] = 1.0
+        mean_auc = auc(mean_fpr, mean_tpr)
+        plt.plot(mean_fpr, mean_tpr, color='black',
+                 label=r'Mean ROC (AUC = %0.3f)' % (mean_auc),
+                 lw=2, alpha=0.8)
+        
+        plt.xlim([-0.05, 1.05])
+        plt.ylim([-0.05, 1.05])
+        plt.xlabel('False Positive Rate', fontsize=18, weight='bold')
+        plt.ylabel('True Positive Rate', fontsize=18, weight='bold')
+        plt.title('Receiver Operating Characteristic (ROC) Curve\nRandom Forest', fontsize=20, fontweight='bold')
+        plt.legend(loc="lower right",fontsize=14)
+        plt.xticks(fontsize=16)
+        plt.yticks(fontsize=16)
+        plt.show()
+        
+        fileName = 'Random_Forest_ROC_' + str(numFold) + '_Fold.eps'
+        # Saving the figure
+        myFig.savefig(fileName, format='eps', dpi=1200)
+    
+    # Statistical measurement of the model
+    print("Accuracy: ", np.mean(acc_scores))
+    print("Precision: ", np.mean(precision_scores))
+    print("Recall: ", np.mean(recall_scores))
+    print("F1: ", np.mean(f1_scores))
+    if(len(np.unique(Y)) == 2):
+        print(acc_scores)
+        print(precision_scores)
+        print(recall_scores)
+        print(f1_scores)
+        
+# Modular function to apply artificial neural network 
+def ANN_classifier(X, Y, batchSize, epochCount):
+    
+    myFig = plt.figure(figsize=[12,10])
+
+    # Spliting the dataset into the Training and Test Set
+    from sklearn.model_selection import train_test_split
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size = 0.2, random_state = 42, stratify=Y)
+    
+    # Initializing the ANN
+    classifier = Sequential()
+    
+    # Adding the input layer and the first hidden layer
+    classifier.add(Dense(output_dim = round(X.shape[1]/2), init =  'uniform', activation = 'relu', input_dim = X.shape[1]))
+    
+    # Adding the second hidden layer
+    classifier.add(Dense(output_dim = round(X.shape[1]/2), init =  'uniform', activation = 'relu'))
+    
+    if(len(np.unique(Y)) > 2): # Multi-classification task
+        # Adding the output layer
+        classifier.add(Dense(output_dim = len(np.unique(Y)), init =  'uniform', activation = 'softmax'))
+        # Compiling the ANN
+        classifier.compile(optimizer = 'adam', loss = 'sparse_categorical_crossentropy', metrics = ['accuracy'])
+    else: # Binary classification task
+        # Adding the output layer
+        classifier.add(Dense(output_dim = 1, init =  'uniform', activation = 'sigmoid'))
+        # Compiling the ANN
+        classifier.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy'])
+    
+    # Callback to stop if validation loss does not decrease
+    callbacks = [EarlyStopping(monitor='val_loss', patience=2)]
+
+    # Fitting the ANN to the Training set
+    history = classifier.fit(X_train,
+                   Y_train,
+                   callbacks=callbacks,
+                   validation_split=0.2,
+                   batch_size = batchSize,
+                   epochs = epochCount,
+                   shuffle=True)
+    
+    # ------ Evaluation -------
+
+    print("ANN using Bigram Model")
+        
+    # Predicting the Test set results
+    Y_pred = classifier.predict_classes(X_test)
+    Y_pred = (Y_pred > 0.5)
+    
+    # Breakdown of statistical measure based on classes
+    print(classification_report(Y_test, Y_pred, digits=4))
+    
+    # Compute the model's performance
+
+    # Making the cufusion Matrix
+    cm = confusion_matrix(Y_test, Y_pred)
+    print("Confusion Matrix:\n", cm)
+    print("Accuracy: ", accuracy_score(Y_test, Y_pred))
+    
+    if(len(np.unique(Y))) == 2:
+        print("F1: ", f1_score(Y_test, Y_pred, average='binary'))
+        print("Precison: ", precision_score(Y_test, Y_pred, average='binary'))
+        print("Recall: ", recall_score(Y_test, Y_pred, average='binary'))
+    else:
+        f1_scores = f1_score(Y_test, Y_pred, average=None)
+        print("F1: ", np.mean(f1_scores))
+        precision_scores = precision_score(Y_test, Y_pred, average=None)
+        print("Precison: ", np.mean(precision_scores))
+        recall_scores = recall_score(Y_test, Y_pred, average=None)
+        print("Recall: ", np.mean(recall_scores))
+    
+    # ------------ Print Accuracy over Epoch --------------------
+
+    plt.plot(history.history['acc'], linestyle = ':',lw = 2, alpha=0.8, color = 'black')
+    plt.plot(history.history['val_acc'], linestyle = '--',lw = 2, alpha=0.8, color = 'black')
+    plt.title('Accuracy over Epoch\nANN', fontsize=20, weight='bold')
+    plt.ylabel('Accuracy', fontsize=18, weight='bold')
+    plt.xlabel('Epoch', fontsize=18, weight='bold')
+    plt.legend(['Train', 'Validation'], loc='lower right', fontsize=14)
+    plt.xticks(ticks=range(0, len(history.history['acc'])))
+    
+    plt.yticks(fontsize=16)
+    plt.show()
+        
+    if(len(np.unique(Y))) == 2:
+        fileName = 'ANN_Accuracy_over_Epoch_Binary_Classification.eps'
+    else:
+        fileName = 'ANN_Accuracy_over_Epoch_Multiclass_Classification.eps'
+    
+    # Saving the figure
+    myFig.savefig(fileName, format='eps', dpi=1200)
+    
+    # Clear figure
+    plt.clf()
+    if len(np.unique(Y)) == 2:
+        fpr, tpr, _ = roc_curve(Y_test, Y_pred)
+        plt.plot(fpr, tpr, color='black',
+                label=r'ROC (AUC = %0.3f)' % (auc(fpr, tpr)),
+                lw=2, alpha=0.8)
+            
+        plt.xlim([-0.05, 1.05])
+        plt.ylim([-0.05, 1.05])
+        plt.xlabel('False Positive Rate', fontsize=18, weight='bold')
+        plt.ylabel('True Positive Rate', fontsize=18, weight='bold')
+        plt.title('Receiver Operating Characteristic (ROC) Curve\nANN', fontsize=20, fontweight='bold')
+        plt.legend(loc="lower right",fontsize=14)
+        plt.xticks(fontsize=16)
+        plt.yticks(fontsize=16)
+        plt.show()
+            
+        fileName = 'ANN_ROC.eps'
+        # Saving the figure
+        myFig.savefig(fileName, format='eps', dpi=1200)
+
+# Importing the libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Libraries relevant to performance metrics
+from sklearn.metrics import roc_curve, auc, confusion_matrix, classification_report, accuracy_score, precision_score, recall_score, f1_score
+from sklearn.model_selection import StratifiedKFold
+from scipy import interp
+
+# Libraries relevant to supervised learning 
+from sklearn import tree
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.svm import SVC
+
+# Importing the Keras libraries and packages
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.callbacks import EarlyStopping
+
+#importing the data set
+dataset = pd.read_csv('CICIDS2017/master.csv')
+print(dataset.head())
+
+# Some manual processing on the dataframe
+dataset = dataset.dropna()
+dataset = dataset.drop(['Flow_ID', '_Source_IP', '_Destination_IP', '_Timestamp'], axis = 1)
+dataset['Flow_Bytes/s'] = dataset['Flow_Bytes/s'].astype(float)
+dataset['_Flow_Packets/s'] = dataset['_Flow_Packets/s'].astype(float)
+
+# Creating X and Y from the dataset
+from sklearn import preprocessing
+le = preprocessing.LabelEncoder()
+le.fit(dataset['Label'])
+Y_attack = le.transform(dataset['Label'])
+print(list(le.classes_))
+print(np.unique(Y_attack))
+Y_class = dataset.iloc[:,-1].values
+X = dataset.iloc[:,0:80].values
+X = X.astype(int)
+del(dataset)
+    
+# 5-fold cross validation
+ANN_classifier(X, Y_class, 128, 10)
