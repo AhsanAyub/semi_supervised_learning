@@ -423,7 +423,7 @@ for i in range(0,948995):
         print("Exception")
         continue
 
-dataset_sample.to_csv ('sample_dataset.csv', index = None, header=True)
+dataset_sample.to_csv('sample_dataset.csv', index = None, header=True)
 
 # Creating X and Y from the dataset
 from sklearn import preprocessing
