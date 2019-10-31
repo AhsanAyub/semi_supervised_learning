@@ -198,11 +198,11 @@ from keras.callbacks import EarlyStopping
 
 #importing the data set
 # ==== Data processing for CICIDS 2017 ====
-dataset = pd.read_csv('../CICIDS2017/master.csv')
+'''dataset = pd.read_csv('../CICIDS2017/master.csv')
 print(dataset.head())
 print(dataset.shape)
 
-'''# Some manual processing on the dataframe
+# Some manual processing on the dataframe
 dataset = dataset.dropna()
 dataset = dataset.drop(['Flow_ID', '_Source_IP', '_Destination_IP', '_Timestamp'], axis = 1)
 dataset['Flow_Bytes/s'] = dataset['Flow_Bytes/s'].astype(float)
@@ -217,7 +217,7 @@ print(list(le.classes_))
 print(np.unique(Y_attack))
 Y_class = dataset.iloc[:,-1].values
 X = dataset.iloc[:,0:80].values
-X = X.astype(int)
+X = X.astype(int)'''
 
 # ==== Data processing for TRAbID 2017 ====
 from scipy.io import arff
@@ -229,7 +229,7 @@ print(dataset.shape)
 # Creating X and Y from the dataset
 X = dataset.iloc[:,0:43].values
 Y_class = pd.read_csv('TRAbID2017_dataset_Y_class.csv')
-Y_class = Y_class.iloc[:,:].values'''
+Y_class = Y_class.iloc[:,:].values
 
 # Performing scale data
 scaler = MinMaxScaler().fit(X)
