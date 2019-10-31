@@ -35,12 +35,143 @@ def mlp_model(X, Y):
     
     return model
 
-'''def evaluate():
-    eval_params = {
-        'batch_size': 64
-        }
-    accuracy = model_eval(sess, X_placeholder, Y_placeholder, predictions , X_test , Y_test, args=eval_params)
-    print('Test  accuracy  on  legitimate  test  examples: ' + str(accuracy))'''
+
+# Train the multilayer perceptron  model or ANN
+def mlp_model_train(X, Y, val_split, batch_size, epochs_count):
+    # Callback to stop if validation loss does not decrease
+    callbacks = [EarlyStopping(monitor='val_loss', patience=2)]
+
+    # Fitting the ANN to the Training set
+    history = model.fit(X, Y,
+                   callbacks=callbacks,
+                   validation_split=val_split,
+                   batch_size = batch_size,
+                   epochs = epochs_count,
+                   shuffle=True)
+
+    print(history.history)
+    print(model.summary())
+    return history
+
+
+# Evaluate the multilayer perceptron  model or ANN during test time
+def mlp_model_eval(X, Y, history, flag):
+    # Predicting the results given instances X
+    Y_pred = model.predict_classes(X)
+    Y_pred = (Y_pred > 0.5)
+
+    # Breakdown of statistical measure based on classes
+    print(classification_report(Y, Y_pred, digits=4))
+
+    # Making the cufusion Matrix
+    cm = confusion_matrix(Y, Y_pred)
+    print("Confusion Matrix:\n", cm)
+    print("Accuracy: ", accuracy_score(Y, Y_pred))
+
+    if(len(np.unique(Y))) == 2:
+        print("F1: ", f1_score(Y, Y_pred, average='binary'))
+        print("Precison: ", precision_score(Y, Y_pred, average='binary'))
+        print("Recall: ", recall_score(Y, Y_pred, average='binary'))
+    else:
+        f1_scores = f1_score(Y, Y_pred, average=None)
+        print("F1: ", np.mean(f1_scores))
+        precision_scores = precision_score(Y, Y_pred, average=None)
+        print("Precison: ", np.mean(precision_scores))
+        recall_scores = recall_score(Y, Y_pred, average=None)
+        print("Recall: ", np.mean(recall_scores))
+
+    # ------------ Print Accuracy over Epoch --------------------
+
+    # Intilization of the figure
+    myFig = plt.figure(figsize=[12,10])
+
+    plt.plot(history.history['acc'], linestyle = ':',lw = 2, alpha=0.8, color = 'black')
+    plt.plot(history.history['val_acc'], linestyle = '--',lw = 2, alpha=0.8, color = 'black')
+    plt.title('Accuracy over Epoch\nArtificial Neural Network', fontsize=20, weight='bold')
+    plt.ylabel('Accuracy', fontsize=18, weight='bold')
+    plt.xlabel('Epoch', fontsize=18, weight='bold')
+    plt.legend(['Train', 'Validation'], loc='lower right', fontsize=14)
+    plt.xticks(ticks=range(0, len(history.history['acc'])))
+    
+    plt.yticks(fontsize=16)
+    plt.show()
+        
+    if(len(np.unique(Y))) == 2:
+        if(flag == 1): #Regular
+            fileName = 'ANN_Accuracy_over_Epoch_Binary_Classification_Regular.eps'
+        else: #Adversarial
+            fileName = 'ANN_Accuracy_over_Epoch_Binary_Classification_Adversarial.eps'
+    else:
+        if(flag == 1): #Regular
+            fileName = 'ANN_Accuracy_over_Epoch_Multiclass_Classification_Regular.eps'
+        else: #Adversarial
+            fileName = 'ANN_Accuracy_over_Epoch_Multiclass_Classification_Adversarial.eps'
+    
+    # Saving the figure
+    myFig.savefig(fileName, format='eps', dpi=1200)
+    
+    # ------------ Print Loss over Epoch --------------------
+
+    # Clear figure
+    plt.clf()
+    myFig = plt.figure(figsize=[12,10])
+    
+    plt.plot(history.history['loss'], linestyle = ':',lw = 2, alpha=0.8, color = 'black')
+    plt.plot(history.history['val_loss'], linestyle = '--',lw = 2, alpha=0.8, color = 'black')
+    plt.title('Loss over Epoch\nArtificial Neural Network', fontsize=20, weight='bold')
+    plt.ylabel('Loss', fontsize=18, weight='bold')
+    plt.xlabel('Epoch', fontsize=18, weight='bold')
+    plt.legend(['Train', 'Validation'], loc='upper right', fontsize=14)
+    plt.xticks(ticks=range(0, len(history.history['loss'])))
+    
+    plt.yticks(fontsize=16)
+    plt.show()
+        
+    if(len(np.unique(Y))) == 2:
+        if(flag == 1): #Regular
+            fileName = 'ANN_Loss_over_Epoch_Binary_Classification_Regular.eps'
+        else: #Adversarial 
+            fileName = 'ANN_Loss_over_Epoch_Binary_Classification_Adversarial.eps'
+    else:
+        if(flag == 1): #Regular
+            fileName = 'ANN_Loss_over_Epoch_Multiclass_Classification_Regular.eps'
+        else: #Adversarial
+            fileName = 'ANN_Loss_over_Epoch_Multiclass_Classification_Adversarial.eps'
+    
+    # Saving the figure
+    myFig.savefig(fileName, format='eps', dpi=1200)
+    
+    
+    # ------------ ROC Curve --------------------
+
+    # Clear figure
+    plt.clf()
+    myFig = plt.figure(figsize=[12,10])
+    
+    if len(np.unique(Y)) == 2:
+        fpr, tpr, _ = roc_curve(Y_test, Y_pred)
+        plt.plot(fpr, tpr, color='black',
+                label=r'ROC (AUC = %0.3f)' % (auc(fpr, tpr)),
+                lw=2, alpha=0.8)
+            
+        plt.xlim([-0.05, 1.05])
+        plt.ylim([-0.05, 1.05])
+        plt.xlabel('False Positive Rate', fontsize=18, weight='bold')
+        plt.ylabel('True Positive Rate', fontsize=18, weight='bold')
+        plt.title('Receiver Operating Characteristic (ROC) Curve\nArtificial Neural Network', fontsize=20, fontweight='bold')
+        plt.legend(loc="lower right",fontsize=14)
+        plt.xticks(fontsize=16)
+        plt.yticks(fontsize=16)
+        plt.show()
+        
+        if(flag == 1): #Regular
+            fileName = 'ANN_Binary_Classification_ROC_Regular.eps'
+        else: #Adversarial
+            fileName = 'ANN_Binary_Classification_ROC_Adversarial.eps'
+
+        # Saving the figure
+        myFig.savefig(fileName, format='eps', dpi=1200)
+
 
 # import libraries
 import numpy as np
@@ -49,17 +180,14 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 
 # importing cleverhans - an adversarial example library
-import cleverhans
 from cleverhans.attacks import SaliencyMapMethod
-from cleverhans.attacks import FastGradientMethod
-from cleverhans.utils_tf import model_train, model_eval, batch_eval
 from cleverhans.attacks_tf import jacobian_graph
-from cleverhans.utils import other_classes
+#from cleverhans.attacks import FastGradientMethod
+#from cleverhans.utils_tf import model_train, model_eval, batch_eval
 
 # Libraries relevant to performance metrics
 from sklearn.metrics import roc_curve, auc, confusion_matrix, classification_report, accuracy_score, precision_score, recall_score, f1_score
 from sklearn.model_selection import StratifiedKFold
-from scipy import interp
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 
@@ -69,8 +197,15 @@ from keras.layers import Dense
 from keras.callbacks import EarlyStopping
 
 #importing the data set
-dataset = pd.read_csv('sample_dataset.csv')
+#dataset = pd.read_csv('sample_dataset.csv')
+dataset = pd.read_csv('../CICIDS2017/master.csv')
 print(dataset.head())
+
+# Some manual processing on the dataframe
+dataset = dataset.dropna()
+dataset = dataset.drop(['Flow_ID', '_Source_IP', '_Destination_IP', '_Timestamp'], axis = 1)
+dataset['Flow_Bytes/s'] = dataset['Flow_Bytes/s'].astype(float)
+dataset['_Flow_Packets/s'] = dataset['_Flow_Packets/s'].astype(float)
 
 # Creating X and Y from the dataset
 from sklearn import preprocessing
@@ -103,63 +238,17 @@ predictions = model(X_placeholder)
 print('Prediction: ', predictions)
 
 # ============== Training the model ==============
+history = mlp_model_train(X_train, Y_train,
+                0.1, # Validation Split
+                64, # Batch Size
+                100 # Epoch Count
+                )
 
-# Callback to stop if validation loss does not decrease
-callbacks = [EarlyStopping(monitor='val_loss', patience=2)]
-
-# Fitting the ANN to the Training set
-history = model.fit(X_train,
-               Y_train,
-               callbacks=callbacks,
-               validation_split=0.1,
-               batch_size = 64,
-               epochs = 100,
-               shuffle=True)
-
-print(history.history)
-print(model.summary())
-
-
-# ============== Training the model ==============
+# ============== Evaluation of the model with actual instances ==============
 
 print("Performance when using actual testing instances")
-    
-# Predicting the Test set results
-Y_pred = model.predict_classes(X_test)
-Y_pred = (Y_pred > 0.5)
+mlp_model_eval(X_test, Y_test, history, 1)
 
-# Breakdown of statistical measure based on classes
-print(classification_report(Y_test, Y_pred, digits=4))
-
-# Making the cufusion Matrix
-cm = confusion_matrix(Y_test, Y_pred)
-print("Confusion Matrix (Actual):\n", cm)
-print("Accuracy (Actual): ", accuracy_score(Y_test, Y_pred))
-
-if(len(np.unique(Y_test))) == 2:
-    print("F1 (Actual): ", f1_score(Y_test, Y_pred, average='binary'))
-    print("Precison (Actual): ", precision_score(Y_test, Y_pred, average='binary'))
-    print("Recall (Actual): ", recall_score(Y_test, Y_pred, average='binary'))
-else:
-    f1_scores = f1_score(Y_test, Y_pred, average=None)
-    print("F1 (Actual): ", np.mean(f1_scores))
-    precision_scores = precision_score(Y_test, Y_pred, average=None)
-    print("Precison (Actual): ", np.mean(precision_scores))
-    recall_scores = recall_score(Y_test, Y_pred, average=None)
-    print("Recall (Actual): ", np.mean(recall_scores))
-
-'''# Train the params
-train_params = {
-        'nb_epochs': 10,
-        'batch_size': 64,
-        'learning_rate': 0.1,
-        'verbose': 0
-        }
-
-print("Shape of X's: ", X_placeholder.shape, X_train.shape)
-print("Shape of Y's: ", Y_placeholder.shape, Y_train.shape)
-
-#model_train(sess, X_placeholder, Y_placeholder, predictions, X_train, Y_train, evaluate = evaluate, args = train_params)'''
 
 # ============== Generate adversarial samples for all test datapoints ==============
 
@@ -193,39 +282,8 @@ for sample_ind in range(0, source_samples):
         results[target , sample_ind] = res
         perturbations[target , sample_ind] = percent_perturb
 
-'''# Evaluation of MLP performance
-eval_params = {
-        'batch_size': 64
-        }
 
-accuracy_adv = model_eval(sess, X_placeholder, Y_placeholder, predictions, X_adv, Y_test, args=eval_params)
-print(accuracy_adv)'''
+# ============== Evaluation of the model with adversarial instances ==============
 
 print("Performance when using adversarial testing instances")
-
-# Predicting the Test set results
-Y_pred_adv = model.predict_classes(X_adv)
-Y_pred_adv = (Y_pred_adv > 0.5)
-
-# Breakdown of statistical measure based on classes
-print(classification_report(Y_test, Y_pred_adv, digits=4))
-
-# Making the cufusion Matrix
-cm = confusion_matrix(Y_test, Y_pred_adv)
-print("Confusion Matrix (Adversarial):\n", cm)
-print("Accuracy (Adversarial): ", accuracy_score(Y_test, Y_pred_adv))
-
-if(len(np.unique(Y_test))) == 2:
-    print("F1 (Adversarial): ", f1_score(Y_test, Y_pred_adv, average='binary'))
-    print("Precison (Adversarial): ", precision_score(Y_test, Y_pred_adv, average='binary'))
-    print("Recall (Adversarial): ", recall_score(Y_test, Y_pred_adv, average='binary'))
-else:
-    f1_scores = f1_score(Y_test, Y_pred_adv, average=None)
-    print("F1: ", np.mean(f1_scores))
-    precision_scores = precision_score(Y_test, Y_pred_adv, average=None)
-    print("Precison (Adversarial): ", np.mean(precision_scores))
-    recall_scores = recall_score(Y_test, Y_pred_adv, average=None)
-    print("Recall (Adversarial): ", np.mean(recall_scores))
-
-X_adv.dumps("X_adv.csv")
-X_test.dumps("X_test.csv")
+mlp_model_eval(X_adv, Y_test, history, 2)
