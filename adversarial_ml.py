@@ -87,7 +87,7 @@ def mlp_model_eval(X, Y, history, flag):
 
     plt.plot(history.history['acc'], linestyle = ':',lw = 2, alpha=0.8, color = 'black')
     plt.plot(history.history['val_acc'], linestyle = '--',lw = 2, alpha=0.8, color = 'black')
-    plt.title('Accuracy over Epoch\nArtificial Neural Network', fontsize=20, weight='bold')
+    plt.title('Accuracy over Epoch', fontsize=20, weight='bold')
     plt.ylabel('Accuracy', fontsize=18, weight='bold')
     plt.xlabel('Epoch', fontsize=18, weight='bold')
     plt.legend(['Train', 'Validation'], loc='lower right', fontsize=14)
@@ -98,14 +98,14 @@ def mlp_model_eval(X, Y, history, flag):
         
     if(len(np.unique(Y))) == 2:
         if(flag == 1): #Regular
-            fileName = 'ANN_Accuracy_over_Epoch_Binary_Classification_Regular.eps'
+            fileName = 'ANN_Accuracy_over_Epoch_Binary_Classification_TRAbIDRegular.eps'
         else: #Adversarial
-            fileName = 'ANN_Accuracy_over_Epoch_Binary_Classification_Adversarial.eps'
+            fileName = 'ANN_Accuracy_over_Epoch_Binary_Classification_TRAbID_Adversarial.eps'
     else:
         if(flag == 1): #Regular
-            fileName = 'ANN_Accuracy_over_Epoch_Multiclass_Classification_Regular.eps'
+            fileName = 'ANN_Accuracy_over_Epoch_Multiclass_Classification_TRAbID_Regular.eps'
         else: #Adversarial
-            fileName = 'ANN_Accuracy_over_Epoch_Multiclass_Classification_Adversarial.eps'
+            fileName = 'ANN_Accuracy_over_Epoch_Multiclass_Classification_TRAbID_Adversarial.eps'
     
     # Saving the figure
     myFig.savefig(fileName, format='eps', dpi=1200)
@@ -118,7 +118,7 @@ def mlp_model_eval(X, Y, history, flag):
     
     plt.plot(history.history['loss'], linestyle = ':',lw = 2, alpha=0.8, color = 'black')
     plt.plot(history.history['val_loss'], linestyle = '--',lw = 2, alpha=0.8, color = 'black')
-    plt.title('Loss over Epoch\nArtificial Neural Network', fontsize=20, weight='bold')
+    plt.title('Loss over Epoch', fontsize=20, weight='bold')
     plt.ylabel('Loss', fontsize=18, weight='bold')
     plt.xlabel('Epoch', fontsize=18, weight='bold')
     plt.legend(['Train', 'Validation'], loc='upper right', fontsize=14)
@@ -129,14 +129,14 @@ def mlp_model_eval(X, Y, history, flag):
         
     if(len(np.unique(Y))) == 2:
         if(flag == 1): #Regular
-            fileName = 'ANN_Loss_over_Epoch_Binary_Classification_Regular.eps'
+            fileName = 'ANN_Loss_over_Epoch_Binary_Classification_TRAbID_Regular.eps'
         else: #Adversarial 
-            fileName = 'ANN_Loss_over_Epoch_Binary_Classification_Adversarial.eps'
+            fileName = 'ANN_Loss_over_Epoch_Binary_Classification_TRAbID_Adversarial.eps'
     else:
         if(flag == 1): #Regular
-            fileName = 'ANN_Loss_over_Epoch_Multiclass_Classification_Regular.eps'
+            fileName = 'ANN_Loss_over_Epoch_Multiclass_Classification_TRAbID_Regular.eps'
         else: #Adversarial
-            fileName = 'ANN_Loss_over_Epoch_Multiclass_Classification_Adversarial.eps'
+            fileName = 'ANN_Loss_over_Epoch_Multiclass_Classification_TRAbID_Adversarial.eps'
     
     # Saving the figure
     myFig.savefig(fileName, format='eps', dpi=1200)
@@ -158,16 +158,16 @@ def mlp_model_eval(X, Y, history, flag):
         plt.ylim([-0.05, 1.05])
         plt.xlabel('False Positive Rate', fontsize=18, weight='bold')
         plt.ylabel('True Positive Rate', fontsize=18, weight='bold')
-        plt.title('Receiver Operating Characteristic (ROC) Curve\nArtificial Neural Network', fontsize=20, fontweight='bold')
+        plt.title('Receiver Operating Characteristic (ROC) Curve', fontsize=20, fontweight='bold')
         plt.legend(loc="lower right",fontsize=14)
         plt.xticks(fontsize=16)
         plt.yticks(fontsize=16)
         plt.show()
         
         if(flag == 1): #Regular
-            fileName = 'ANN_Binary_Classification_ROC_Regular.eps'
+            fileName = 'ANN_Binary_Classification_ROC_TRAbID_Regular.eps'
         else: #Adversarial
-            fileName = 'ANN_Binary_Classification_ROC_Adversarial.eps'
+            fileName = 'ANN_Binary_Classification_ROC_TRAbID_Adversarial.eps'
 
         # Saving the figure
         myFig.savefig(fileName, format='eps', dpi=1200)
@@ -197,11 +197,12 @@ from keras.layers import Dense
 from keras.callbacks import EarlyStopping
 
 #importing the data set
-#dataset = pd.read_csv('sample_dataset.csv')
+# ==== Data processing for CICIDS 2017 ====
 dataset = pd.read_csv('../CICIDS2017/master.csv')
 print(dataset.head())
+print(dataset.shape)
 
-# Some manual processing on the dataframe
+'''# Some manual processing on the dataframe
 dataset = dataset.dropna()
 dataset = dataset.drop(['Flow_ID', '_Source_IP', '_Destination_IP', '_Timestamp'], axis = 1)
 dataset['Flow_Bytes/s'] = dataset['Flow_Bytes/s'].astype(float)
@@ -218,11 +219,25 @@ Y_class = dataset.iloc[:,-1].values
 X = dataset.iloc[:,0:80].values
 X = X.astype(int)
 
+# ==== Data processing for TRAbID 2017 ====
+from scipy.io import arff
+data = arff.loadarff('TRAbID2017_dataset.arff')
+dataset = pd.DataFrame(data[0])
+print(dataset.head())
+print(dataset.shape)
+
+# Creating X and Y from the dataset
+X = dataset.iloc[:,0:43].values
+Y_class = pd.read_csv('TRAbID2017_dataset_Y_class.csv')
+Y_class = Y_class.iloc[:,:].values'''
+
 # Performing scale data
 scaler = MinMaxScaler().fit(X)
 X_scaled = np.array(scaler.transform(X))
 
 X_train, X_test, Y_train, Y_test = train_test_split(X_scaled, Y_class, test_size = 0.2, random_state = 42, stratify=Y_class)
+
+print("Data Processing has been performed.")
 
 # Tensorflow  placeholder  variables
 X_placeholder = tf.placeholder(tf.float32 , shape=(None , X_train.shape[1]))
